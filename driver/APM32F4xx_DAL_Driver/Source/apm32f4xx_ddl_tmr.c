@@ -5,7 +5,7 @@
   *
   * @attention
   *
-  * Redistribution and use in source and binary forms, with or without modification, 
+  * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
   *
   * 1. Redistributions of source code must retain the above copyright notice,
@@ -27,13 +27,9 @@
   * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
   * OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
   * The original code has been modified by Geehy Semiconductor.
-  *
-  * Copyright (c) 2016 STMicroelectronics.
-  * Copyright (C) 2023 Geehy Semiconductor.
+  * Copyright (c) 2016 STMicroelectronics. Copyright (C) 2023-2025 Geehy Semiconductor.
   * All rights reserved.
-  *
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
@@ -49,7 +45,7 @@
 #ifdef  USE_FULL_ASSERT
 #include "apm32_assert.h"
 #else
-#define ASSERT_PARAM(_PARAM_) ((void)0U)
+#define ASSERT_PARAM(_PARAM_) ((void)(_PARAM_))
 #endif /* USE_FULL_ASSERT */
 
 /** @addtogroup APM32F4xx_DDL_Driver
@@ -736,7 +732,6 @@ ErrorStatus DDL_TMR_BDT_Init(TMR_TypeDef *TMRx, DDL_TMR_BDT_InitTypeDef *TMR_BDT
   MODIFY_REG(tmpbdtr, TMR_BDT_BRKEN, TMR_BDTInitStruct->BreakState);
   MODIFY_REG(tmpbdtr, TMR_BDT_BRKPOL, TMR_BDTInitStruct->BreakPolarity);
   MODIFY_REG(tmpbdtr, TMR_BDT_AOEN, TMR_BDTInitStruct->AutomaticOutput);
-  MODIFY_REG(tmpbdtr, TMR_BDT_MOEN, TMR_BDTInitStruct->AutomaticOutput);
 
   /* Set TMRx_BDT */
   DDL_TMR_WriteReg(TMRx, BDT, tmpbdtr);

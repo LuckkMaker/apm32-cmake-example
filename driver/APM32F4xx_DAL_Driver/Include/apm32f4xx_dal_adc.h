@@ -27,13 +27,9 @@
   * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
   * OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
   * The original code has been modified by Geehy Semiconductor.
-  *
-  * Copyright (c) 2017 STMicroelectronics.
-  * Copyright (C) 2023 Geehy Semiconductor.
+  * Copyright (c) 2017 STMicroelectronics. Copyright (C) 2023-2025 Geehy Semiconductor.
   * All rights reserved.
-  *
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
@@ -67,6 +63,21 @@
   * @{
   */
 
+/**
+  * @brief  ADC group regular oversampling structure definition
+  */
+typedef struct
+{
+  uint32_t Ratio;                         /*!< Configures the oversampling ratio.
+                                               This parameter can be a value of @ref ADC_oversampling_ratio */
+
+  uint32_t RightBitShift;                 /*!< Configures the division coefficient for the Oversampler.
+                                               This parameter can be a value of @ref ADC_oversampling_data_shift */
+
+  uint32_t TriggeredMode;                 /*!< Selects the regular triggered oversampling mode.
+                                               This parameter can be a value of @ref ADC_oversampling_triggered_mode */
+} ADC_OversamplingTypeDef;
+
 /** 
   * @brief  Structure definition of ADC and regular group initialization 
   * @note   Parameters of this structure are shared within 2 scopes:
@@ -82,11 +93,14 @@
   */
 typedef struct
 {
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   uint32_t ClockPrescaler;               /*!< Select ADC clock prescaler. The clock is common for 
                                               all the ADCs.
                                               This parameter can be a value of @ref ADC_ClockPrescaler */
   uint32_t Resolution;                   /*!< Configures the ADC resolution.
                                               This parameter can be a value of @ref ADC_Resolution */
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   uint32_t DataAlign;                    /*!< Specifies ADC data alignment to right (MSB on register bit 11 and LSB on register bit 0) (default setting)
                                               or to left (if regular group: MSB on register bit 15 and LSB on register bit 4, if injected group (MSB kept as signed value due to potential negative value after offset application): MSB on register bit 14 and LSB on register bit 3).
                                               This parameter can be a value of @ref ADC_Data_align */
@@ -97,6 +111,8 @@ typedef struct
                                               If enabled:  Conversions are performed in sequence mode (multiple ranks defined by 'NbrOfConversion'/'InjectedNbrOfConversion' and each channel rank).
                                                            Scan direction is upward: from rank1 to rank 'n'.
                                               This parameter can be set to ENABLE or DISABLE */
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   uint32_t EOCSelection;                 /*!< Specifies what EOC (End Of Conversion) flag is used for conversion by polling and interruption: end of conversion of each rank or complete sequence.
                                               This parameter can be a value of @ref ADC_EOCSelection.
                                               Note: For injected group, end of conversion (flag&IT) is raised only at the end of the sequence.
@@ -104,6 +120,7 @@ typedef struct
                                                     or polling (DAL_ADCEx_InjectedStart and DAL_ADCEx_InjectedPollForConversion). By the way, polling is still possible since driver will use an estimated timing for end of injected conversion.
                                               Note: If overrun feature is intended to be used, use ADC in mode 'interruption' (function DAL_ADC_Start_IT() ) with parameter EOCSelection set to end of each conversion or in mode 'transfer by DMA' (function DAL_ADC_Start_DMA()).
                                                     If overrun feature is intended to be bypassed, use ADC in mode 'polling' or 'interruption' with parameter EOCSelection must be set to end of sequence */
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   FunctionalState ContinuousConvMode;    /*!< Specifies whether the conversion is performed in single mode (one conversion) or continuous mode for regular group,
                                               after the selected trigger occurred (software start or external trigger).
                                               This parameter can be set to ENABLE or DISABLE. */
@@ -121,6 +138,8 @@ typedef struct
                                               If set to ADC_SOFTWARE_START, external triggers are disabled.
                                               If set to external trigger source, triggering is on event rising edge by default.
                                               This parameter can be a value of @ref ADC_External_trigger_Source_Regular */
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   uint32_t ExternalTrigConvEdge;         /*!< Selects the external trigger edge of regular group.
                                               If trigger is set to ADC_SOFTWARE_START, this parameter is discarded.
                                               This parameter can be a value of @ref ADC_External_trigger_edge_Regular */
@@ -129,6 +148,13 @@ typedef struct
                                               Note: In continuous mode, DMA must be configured in circular mode. Otherwise an overrun will be triggered when DMA buffer maximum pointer is reached.
                                               Note: This parameter must be modified when no conversion is on going on both regular and injected groups (ADC disabled, or ADC enabled without continuous mode or external trigger that could launch a conversion).
                                               This parameter can be set to ENABLE or DISABLE. */
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
+
+#if defined(APM32F425xx) || defined(APM32F427xx)
+  FunctionalState OversamplingMode;     /*!< Specifies whether the oversampling mode is enabled or disabled.
+                                              This parameter can be set to ENABLE or DISABLE. */
+  ADC_OversamplingTypeDef Oversampling; /*!< Specifies the oversampling parameters. */
+#endif /* APM32F425xx || APM32F427xx */
 }ADC_InitTypeDef;
 
 
@@ -194,7 +220,7 @@ typedef struct
 #define DAL_ADC_STATE_REG_BUSY          0x00000100U    /*!< A conversion on group regular is ongoing or can occur (either by continuous mode,
                                                             external trigger, low power auto power-on (if feature available), multimode ADC master control (if feature available)) */
 #define DAL_ADC_STATE_REG_EOC           0x00000200U    /*!< Conversion data available on group regular */
-#define DAL_ADC_STATE_REG_OVR           0x00000400U    /*!< Overrun occurrence */
+#define DAL_ADC_STATE_REG_OVR           0x00000400U    /*!< Not available on APM32F402/403xx device:Overrun occurrence */
 
 /* States of ADC group injected */
 #define DAL_ADC_STATE_INJ_BUSY          0x00001000U    /*!< A conversion on group injected is ongoing or can occur (either by auto-injection mode,
@@ -290,6 +316,7 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
   */
 
 
+#if defined(ADC_CCTRL_ADCPRE)
 /** @defgroup ADC_ClockPrescaler  ADC Clock Prescaler
   * @{
   */ 
@@ -300,7 +327,9 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /**
   * @}
   */ 
+#endif /* ADC_CCTRL_ADCPRE */
 
+#if defined(ADC_CCTRL_SMPDEL2)
 /** @defgroup ADC_delay_between_2_sampling_phases ADC Delay Between 2 Sampling Phases
   * @{
   */ 
@@ -323,7 +352,9 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /**
   * @}
   */ 
+#endif /* ADC_CCTRL_SMPDEL2 */
 
+#if defined(ADC_CTRL1_RESSEL)
 /** @defgroup ADC_Resolution ADC Resolution
   * @{
   */ 
@@ -334,14 +365,18 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /**
   * @}
   */ 
+#endif /* ADC_CTRL1_RESSEL */
 
 /** @defgroup ADC_External_trigger_edge_Regular ADC External Trigger Edge Regular
   * @{
   */ 
 #define ADC_EXTERNALTRIGCONVEDGE_NONE           0x00000000U
 #define ADC_EXTERNALTRIGCONVEDGE_RISING         ((uint32_t)ADC_CTRL2_REGEXTTRGEN_0)
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 #define ADC_EXTERNALTRIGCONVEDGE_FALLING        ((uint32_t)ADC_CTRL2_REGEXTTRGEN_1)
 #define ADC_EXTERNALTRIGCONVEDGE_RISINGFALLING  ((uint32_t)ADC_CTRL2_REGEXTTRGEN)
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
 /**
   * @}
   */ 
@@ -351,6 +386,47 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
   */
 /* Note: Parameter ADC_SOFTWARE_START is a software parameter used for        */
 /*       compatibility with other APM32 devices.                              */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+/* External triggers of regular group for ADC1&ADC2 (if ADCx available) */
+#define ADC1_2_EXTERNALTRIG_T1_CC1      0x00000000U
+#define ADC1_2_EXTERNALTRIG_T1_CC2      ((uint32_t)ADC_CTRL2_REGEXTTRGSEL_0)
+#define ADC1_2_EXTERNALTRIG_T2_CC2      ((uint32_t)(ADC_CTRL2_REGEXTTRGSEL_1 | ADC_CTRL2_REGEXTTRGSEL_0))
+#define ADC1_2_EXTERNALTRIG_T3_TRGO     ((uint32_t)ADC_CTRL2_REGEXTTRGSEL_2)
+#define ADC1_2_EXTERNALTRIG_T4_CC4      ((uint32_t)(ADC_CTRL2_REGEXTTRGSEL_2 | ADC_CTRL2_REGEXTTRGSEL_0))
+#define ADC1_2_EXTERNALTRIG_EXT_IT11    ((uint32_t)(ADC_CTRL2_REGEXTTRGSEL_2 | ADC_CTRL2_REGEXTTRGSEL_1))
+
+/* External triggers of regular group for ADC3 */
+#define ADC3_EXTERNALTRIG_T3_CC1        ADC1_2_EXTERNALTRIG_T1_CC1
+#define ADC3_EXTERNALTRIG_T2_CC3        ADC1_2_EXTERNALTRIG_T1_CC2
+#define ADC3_EXTERNALTRIG_T8_CC1        ADC1_2_EXTERNALTRIG_T2_CC2
+#define ADC3_EXTERNALTRIG_T8_TRGO       ADC1_2_EXTERNALTRIG_T3_TRGO
+#define ADC3_EXTERNALTRIG_T5_CC1        ADC1_2_EXTERNALTRIG_T4_CC4
+#define ADC3_EXTERNALTRIG_T5_CC3        ADC1_2_EXTERNALTRIG_EXT_IT11
+
+/* External triggers of regular group for ADC1&ADC2&ADC3 (if ADCx available) */
+#define ADC1_2_3_EXTERNALTRIG_T1_CC3    ((uint32_t)ADC_CTRL2_REGEXTTRGSEL_1)
+#define ADC1_2_3_SWSTART                ((uint32_t)(ADC_CTRL2_REGEXTTRGSEL_2 | ADC_CTRL2_REGEXTTRGSEL_1 | ADC_CTRL2_REGEXTTRGSEL_0))
+
+/* External triggers of regular group for ADC1&ADC2 (if ADCx available) */
+#define ADC_EXTERNALTRIGCONV_T1_CC1     ADC1_2_EXTERNALTRIG_T1_CC1
+#define ADC_EXTERNALTRIGCONV_T1_CC2     ADC1_2_EXTERNALTRIG_T1_CC2
+#define ADC_EXTERNALTRIGCONV_T2_CC2     ADC1_2_EXTERNALTRIG_T2_CC2
+#define ADC_EXTERNALTRIGCONV_T3_TRGO    ADC1_2_EXTERNALTRIG_T3_TRGO
+#define ADC_EXTERNALTRIGCONV_T4_CC4     ADC1_2_EXTERNALTRIG_T4_CC4
+#define ADC_EXTERNALTRIGCONV_EXT_IT11   ADC1_2_EXTERNALTRIG_EXT_IT11
+
+/*!< External triggers of regular group for ADC3 only */
+#define ADC_EXTERNALTRIGCONV_T2_CC3     ADC3_EXTERNALTRIG_T2_CC3
+#define ADC_EXTERNALTRIGCONV_T3_CC1     ADC3_EXTERNALTRIG_T3_CC1
+#define ADC_EXTERNALTRIGCONV_T5_CC1     ADC3_EXTERNALTRIG_T5_CC1
+#define ADC_EXTERNALTRIGCONV_T5_CC3     ADC3_EXTERNALTRIG_T5_CC3
+#define ADC_EXTERNALTRIGCONV_T8_CC1     ADC3_EXTERNALTRIG_T8_CC1
+#define ADC_EXTERNALTRIGCONV_T8_TRGO    ADC3_EXTERNALTRIG_T8_TRGO
+
+/*!< External triggers of regular group for all ADC instances */
+#define ADC_EXTERNALTRIGCONV_T1_CC3     ADC1_2_3_EXTERNALTRIG_T1_CC3
+#define ADC_SOFTWARE_START              ADC1_2_3_SWSTART
+#else
 #define ADC_EXTERNALTRIGCONV_T1_CC1    0x00000000U
 #define ADC_EXTERNALTRIGCONV_T1_CC2    ((uint32_t)ADC_CTRL2_REGEXTTRGSEL_0)
 #define ADC_EXTERNALTRIGCONV_T1_CC3    ((uint32_t)ADC_CTRL2_REGEXTTRGSEL_1)
@@ -368,6 +444,7 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 #define ADC_EXTERNALTRIGCONV_T8_TRGO   ((uint32_t)(ADC_CTRL2_REGEXTTRGSEL_3 | ADC_CTRL2_REGEXTTRGSEL_2 | ADC_CTRL2_REGEXTTRGSEL_1))
 #define ADC_EXTERNALTRIGCONV_EXT_IT11  ((uint32_t)ADC_CTRL2_REGEXTTRGSEL)
 #define ADC_SOFTWARE_START             ((uint32_t)ADC_CTRL2_REGEXTTRGSEL + 1U)
+#endif /* APM32F403xx || APM32F402xx */
 /**
   * @}
   */ 
@@ -402,10 +479,19 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 #define ADC_CHANNEL_15          ((uint32_t)(ADC_CTRL1_AWDCHSEL_3 | ADC_CTRL1_AWDCHSEL_2 | ADC_CTRL1_AWDCHSEL_1 | ADC_CTRL1_AWDCHSEL_0))
 #define ADC_CHANNEL_16          ((uint32_t)ADC_CTRL1_AWDCHSEL_4)
 #define ADC_CHANNEL_17          ((uint32_t)(ADC_CTRL1_AWDCHSEL_4 | ADC_CTRL1_AWDCHSEL_0))
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 #define ADC_CHANNEL_18          ((uint32_t)(ADC_CTRL1_AWDCHSEL_4 | ADC_CTRL1_AWDCHSEL_1))
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
 
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 #define ADC_CHANNEL_VREFINT     ((uint32_t)ADC_CHANNEL_17)
 #define ADC_CHANNEL_VBAT        ((uint32_t)ADC_CHANNEL_18)
+#else
+#define ADC_CHANNEL_TEMPSENSOR  ((uint32_t)ADC_CHANNEL_16)
+#define ADC_CHANNEL_VREFINT     ((uint32_t)ADC_CHANNEL_17)
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
 /**
   * @}
   */ 
@@ -413,18 +499,54 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /** @defgroup ADC_sampling_times  ADC Sampling Times
   * @{
   */ 
-#define ADC_SAMPLETIME_3CYCLES    0x00000000U
-#define ADC_SAMPLETIME_15CYCLES   ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_0)
-#define ADC_SAMPLETIME_28CYCLES   ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_1)
-#define ADC_SAMPLETIME_56CYCLES   ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_1 | ADC_SMPTIM1_SMPCYCCFG10_0))
-#define ADC_SAMPLETIME_84CYCLES   ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_2)
-#define ADC_SAMPLETIME_112CYCLES  ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_0))
-#define ADC_SAMPLETIME_144CYCLES  ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_1))
-#define ADC_SAMPLETIME_480CYCLES  ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10)
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define ADC_SAMPLETIME_1CYCLE_5     0x00000000U
+#define ADC_SAMPLETIME_7CYCLES_5    ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_0)
+#define ADC_SAMPLETIME_13CYCLES_5   ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_1)
+#define ADC_SAMPLETIME_28CYCLES_5   ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_1 | ADC_SMPTIM1_SMPCYCCFG10_0))
+#define ADC_SAMPLETIME_41CYCLES_5   ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_2)
+#define ADC_SAMPLETIME_55CYCLES_5   ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_0))
+#define ADC_SAMPLETIME_71CYCLES_5   ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_1))
+#define ADC_SAMPLETIME_239CYCLES_5  ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10)
+#else 
+#define ADC_SAMPLETIME_3CYCLES      0x00000000U
+#define ADC_SAMPLETIME_15CYCLES     ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_0)
+#define ADC_SAMPLETIME_28CYCLES     ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_1)
+#define ADC_SAMPLETIME_56CYCLES     ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_1 | ADC_SMPTIM1_SMPCYCCFG10_0))
+#define ADC_SAMPLETIME_84CYCLES     ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10_2)
+#define ADC_SAMPLETIME_112CYCLES    ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_0))
+#define ADC_SAMPLETIME_144CYCLES    ((uint32_t)(ADC_SMPTIM1_SMPCYCCFG10_2 | ADC_SMPTIM1_SMPCYCCFG10_1))
+#define ADC_SAMPLETIME_480CYCLES    ((uint32_t)ADC_SMPTIM1_SMPCYCCFG10)
+#endif /* APM32F403xx || APM32F402xx */
 /**
   * @}
   */ 
 
+/** @defgroup ADC_regular_rank ADC rank into regular group
+  * @{
+  */
+#define ADC_REGULAR_RANK_1                 0x00000001U
+#define ADC_REGULAR_RANK_2                 0x00000002U
+#define ADC_REGULAR_RANK_3                 0x00000003U
+#define ADC_REGULAR_RANK_4                 0x00000004U
+#define ADC_REGULAR_RANK_5                 0x00000005U
+#define ADC_REGULAR_RANK_6                 0x00000006U
+#define ADC_REGULAR_RANK_7                 0x00000007U
+#define ADC_REGULAR_RANK_8                 0x00000008U
+#define ADC_REGULAR_RANK_9                 0x00000009U
+#define ADC_REGULAR_RANK_10                0x0000000AU
+#define ADC_REGULAR_RANK_11                0x0000000BU
+#define ADC_REGULAR_RANK_12                0x0000000CU
+#define ADC_REGULAR_RANK_13                0x0000000DU
+#define ADC_REGULAR_RANK_14                0x0000000EU
+#define ADC_REGULAR_RANK_15                0x0000000FU
+#define ADC_REGULAR_RANK_16                0x00000010U
+/**
+  * @}
+  */
+
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   /** @defgroup ADC_EOCSelection ADC EOC Selection
   * @{
   */ 
@@ -434,12 +556,15 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /**
   * @}
   */ 
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx */
 
 /** @defgroup ADC_Event_type ADC Event Type
   * @{
   */ 
 #define ADC_AWD_EVENT             ((uint32_t)ADC_FLAG_AWD)
+#if defined(ADC_STS_OVRFLG)
 #define ADC_OVR_EVENT             ((uint32_t)ADC_FLAG_OVR)
+#endif /* ADC_STS_OVRFLG */
 /**
   * @}
   */
@@ -457,14 +582,62 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 /**
   * @}
   */ 
-    
+
+#if defined(ADC_OSAMPCTRL_OSR)
+/** @defgroup ADC_oversampling_ratio  ADC Oversampling Ratio
+  * @{
+  */ 
+#define ADC_OVERSAMPLING_RATIO_2       (0x00000000U)
+#define ADC_OVERSAMPLING_RATIO_4       ((uint32_t)ADC_OSAMPCTRL_OSR_0)
+#define ADC_OVERSAMPLING_RATIO_8       ((uint32_t)ADC_OSAMPCTRL_OSR_1)
+#define ADC_OVERSAMPLING_RATIO_16      ((uint32_t)(ADC_OSAMPCTRL_OSR_1 | ADC_OSAMPCTRL_OSR_0))
+#define ADC_OVERSAMPLING_RATIO_32      ((uint32_t)ADC_OSAMPCTRL_OSR_2)
+#define ADC_OVERSAMPLING_RATIO_64      ((uint32_t)(ADC_OSAMPCTRL_OSR_2 | ADC_OSAMPCTRL_OSR_0))
+#define ADC_OVERSAMPLING_RATIO_128     ((uint32_t)(ADC_OSAMPCTRL_OSR_2 | ADC_OSAMPCTRL_OSR_1))
+#define ADC_OVERSAMPLING_RATIO_256     ((uint32_t)(ADC_OSAMPCTRL_OSR_2 | ADC_OSAMPCTRL_OSR_1 | ADC_OSAMPCTRL_OSR_0))
+/**
+  * @}
+  */
+#endif /* ADC_OSAMPCTRL_OSR */
+
+#if defined(ADC_OSAMPCTRL_OSS)
+/** @defgroup ADC_oversampling_data_shift  ADC Oversampling Data Shift
+  * @{
+  */ 
+#define ADC_OVERSAMPLING_SHIFT_0       (0x00000000U)
+#define ADC_OVERSAMPLING_SHIFT_1       ((uint32_t)ADC_OSAMPCTRL_OSS_0)
+#define ADC_OVERSAMPLING_SHIFT_2       ((uint32_t)ADC_OSAMPCTRL_OSS_1)
+#define ADC_OVERSAMPLING_SHIFT_3       ((uint32_t)(ADC_OSAMPCTRL_OSS_1 | ADC_OSAMPCTRL_OSS_0))
+#define ADC_OVERSAMPLING_SHIFT_4       ((uint32_t)ADC_OSAMPCTRL_OSS_2)
+#define ADC_OVERSAMPLING_SHIFT_5       ((uint32_t)(ADC_OSAMPCTRL_OSS_2 | ADC_OSAMPCTRL_OSS_0))
+#define ADC_OVERSAMPLING_SHIFT_6       ((uint32_t)(ADC_OSAMPCTRL_OSS_2 | ADC_OSAMPCTRL_OSS_1))
+#define ADC_OVERSAMPLING_SHIFT_7       ((uint32_t)(ADC_OSAMPCTRL_OSS_2 | ADC_OSAMPCTRL_OSS_1 | ADC_OSAMPCTRL_OSS_0))
+#define ADC_OVERSAMPLING_SHIFT_8       ((uint32_t)ADC_OSAMPCTRL_OSS_3)
+/**
+  * @}
+  */
+#endif /* ADC_OSAMPCTRL_OSS */
+
+#if defined(ADC_OSAMPCTRL_TOS)
+/** @defgroup ADC_oversampling_triggered_mode  ADC Oversampling Triggered Mode
+  * @{
+  */ 
+#define ADC_OVERSAMPLING_MULTI_TRIGGER  (0x00000000U)
+#define ADC_OVERSAMPLING_SINGLE_TRIGGER ((uint32_t)ADC_OSAMPCTRL_TOS)
+/**
+  * @}
+  */
+#endif /* ADC_OSAMPCTRL_TOS */
+
 /** @defgroup ADC_interrupts_definition ADC Interrupts Definition
   * @{
   */ 
 #define ADC_IT_EOC      ((uint32_t)ADC_CTRL1_EOCIEN)
 #define ADC_IT_AWD      ((uint32_t)ADC_CTRL1_AWDIEN)
 #define ADC_IT_JEOC     ((uint32_t)ADC_CTRL1_INJEOCIEN)
+#if defined(ADC_CTRL1_OVRIEN)
 #define ADC_IT_OVR      ((uint32_t)ADC_CTRL1_OVRIEN)
+#endif /* ADC_CTRL1_OVRIEN */
 /**
   * @}
   */ 
@@ -477,7 +650,9 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 #define ADC_FLAG_JEOC   ((uint32_t)ADC_STS_INJEOCFLG)
 #define ADC_FLAG_JSTRT  ((uint32_t)ADC_STS_INJCSFLG)
 #define ADC_FLAG_STRT   ((uint32_t)ADC_STS_REGCSFLG)
+#if defined(ADC_STS_OVRFLG)
 #define ADC_FLAG_OVR    ((uint32_t)ADC_STS_OVRFLG)
+#endif /* ADC_STS_OVRFLG */
 /**
   * @}
   */ 
@@ -508,7 +683,7 @@ typedef  void (*pADC_CallbackTypeDef)(ADC_HandleTypeDef *hadc); /*!< pointer to 
 #if (USE_DAL_ADC_REGISTER_CALLBACKS == 1)
 #define __DAL_ADC_RESET_HANDLE_STATE(__HANDLE__)                               \
   do{                                                                          \
-     (__HANDLE__)->State = DAL_ADC_STATE_RESET;                               \
+     (__HANDLE__)->State = DAL_ADC_STATE_RESET;                                \
      (__HANDLE__)->MspInitCallback = NULL;                                     \
      (__HANDLE__)->MspDeInitCallback = NULL;                                   \
     } while(0)
@@ -683,7 +858,7 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
   * @retval SET (ADC enabled) or RESET (ADC disabled)
   */
 #define ADC_IS_ENABLE(__HANDLE__)                                              \
-  ((( ((__HANDLE__)->Instance->CTRL2 & ADC_CTRL2_ADCEN) == ADC_CTRL2_ADCEN )            \
+  ((( ((__HANDLE__)->Instance->CTRL2 & ADC_CTRL2_ADCEN) == ADC_CTRL2_ADCEN )   \
   ) ? SET : RESET)
 
 /**
@@ -721,11 +896,13 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
 #define ADC_CLEAR_ERRORCODE(__HANDLE__)                                        \
   ((__HANDLE__)->ErrorCode = DAL_ADC_ERROR_NONE)
 
-    
+#if defined(ADC_CCTRL_ADCPRE)
 #define IS_ADC_CLOCKPRESCALER(ADC_CLOCK)     (((ADC_CLOCK) == ADC_CLOCK_SYNC_PCLK_DIV2) || \
                                               ((ADC_CLOCK) == ADC_CLOCK_SYNC_PCLK_DIV4) || \
                                               ((ADC_CLOCK) == ADC_CLOCK_SYNC_PCLK_DIV6) || \
                                               ((ADC_CLOCK) == ADC_CLOCK_SYNC_PCLK_DIV8))
+#endif /* ADC_CCTRL_ADCPRE */
+#if defined(ADC_CCTRL_SMPDEL2)
 #define IS_ADC_SAMPLING_DELAY(DELAY) (((DELAY) == ADC_TWOSAMPLINGDELAY_5CYCLES)  || \
                                       ((DELAY) == ADC_TWOSAMPLINGDELAY_6CYCLES)  || \
                                       ((DELAY) == ADC_TWOSAMPLINGDELAY_7CYCLES)  || \
@@ -742,14 +919,37 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
                                       ((DELAY) == ADC_TWOSAMPLINGDELAY_18CYCLES) || \
                                       ((DELAY) == ADC_TWOSAMPLINGDELAY_19CYCLES) || \
                                       ((DELAY) == ADC_TWOSAMPLINGDELAY_20CYCLES))
+#endif /* ADC_CCTRL_SMPDEL2 */
+#if defined(ADC_CTRL1_RESSEL)
 #define IS_ADC_RESOLUTION(RESOLUTION) (((RESOLUTION) == ADC_RESOLUTION_12B) || \
                                        ((RESOLUTION) == ADC_RESOLUTION_10B) || \
                                        ((RESOLUTION) == ADC_RESOLUTION_8B)  || \
                                        ((RESOLUTION) == ADC_RESOLUTION_6B))
+#endif /* ADC_CTRL1_RESSEL */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define IS_ADC_EXT_TRIG_EDGE(EDGE) (((EDGE) == ADC_EXTERNALTRIGCONVEDGE_NONE)    || \
+                                    ((EDGE) == ADC_EXTERNALTRIGCONVEDGE_RISING))
+#else
 #define IS_ADC_EXT_TRIG_EDGE(EDGE) (((EDGE) == ADC_EXTERNALTRIGCONVEDGE_NONE)    || \
                                     ((EDGE) == ADC_EXTERNALTRIGCONVEDGE_RISING)  || \
                                     ((EDGE) == ADC_EXTERNALTRIGCONVEDGE_FALLING) || \
                                     ((EDGE) == ADC_EXTERNALTRIGCONVEDGE_RISINGFALLING))
+#endif /* APM32F403xx || APM32F402xx */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define IS_ADC_EXT_TRIG(REGTRIG) (((REGTRIG) == ADC_EXTERNALTRIGCONV_T1_CC1)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T1_CC2)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T2_CC2)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T3_TRGO) || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T4_CC4)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_EXT_IT11) || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T2_CC3)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T3_CC1)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T5_CC1)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T5_CC3)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T8_CC1)  || \
+                                  ((REGTRIG) == ADC_EXTERNALTRIGCONV_T8_TRGO) || \
+                                  ((REGTRIG) == ADC_SOFTWARE_START))
+#else
 #define IS_ADC_EXT_TRIG(REGTRIG) (((REGTRIG) == ADC_EXTERNALTRIGCONV_T1_CC1)  || \
                                   ((REGTRIG) == ADC_EXTERNALTRIGCONV_T1_CC2)  || \
                                   ((REGTRIG) == ADC_EXTERNALTRIGCONV_T1_CC3)  || \
@@ -767,8 +967,19 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
                                   ((REGTRIG) == ADC_EXTERNALTRIGCONV_T8_TRGO) || \
                                   ((REGTRIG) == ADC_EXTERNALTRIGCONV_EXT_IT11)|| \
                                   ((REGTRIG) == ADC_SOFTWARE_START))
+#endif /* APM32F403xx || APM32F402xx */
 #define IS_ADC_DATA_ALIGN(ALIGN) (((ALIGN) == ADC_DATAALIGN_RIGHT) || \
                                   ((ALIGN) == ADC_DATAALIGN_LEFT))
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define IS_ADC_SAMPLE_TIME(TIME) (((TIME) == ADC_SAMPLETIME_1CYCLE_5)  || \
+                                  ((TIME) == ADC_SAMPLETIME_7CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_13CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_28CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_41CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_55CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_71CYCLES_5) || \
+                                  ((TIME) == ADC_SAMPLETIME_239CYCLES_5))
+#else
 #define IS_ADC_SAMPLE_TIME(TIME) (((TIME) == ADC_SAMPLETIME_3CYCLES)   || \
                                   ((TIME) == ADC_SAMPLETIME_15CYCLES)  || \
                                   ((TIME) == ADC_SAMPLETIME_28CYCLES)  || \
@@ -777,11 +988,19 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
                                   ((TIME) == ADC_SAMPLETIME_112CYCLES) || \
                                   ((TIME) == ADC_SAMPLETIME_144CYCLES) || \
                                   ((TIME) == ADC_SAMPLETIME_480CYCLES))
+#endif /* APM32F403xx || APM32F402xx */
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 #define IS_ADC_EOCSelection(EOCSelection) (((EOCSelection) == ADC_EOC_SINGLE_CONV)   || \
                                            ((EOCSelection) == ADC_EOC_SEQ_CONV)  || \
                                            ((EOCSelection) == ADC_EOC_SINGLE_SEQ_CONV))
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define IS_ADC_EVENT_TYPE(EVENT) (((EVENT) == ADC_AWD_EVENT))
+#else
 #define IS_ADC_EVENT_TYPE(EVENT) (((EVENT) == ADC_AWD_EVENT) || \
                                   ((EVENT) == ADC_OVR_EVENT))
+#endif /* APM32F403xx || APM32F402xx */
 #define IS_ADC_ANALOG_WATCHDOG(WATCHDOG) (((WATCHDOG) == ADC_ANALOGWATCHDOG_SINGLE_REG)        || \
                                           ((WATCHDOG) == ADC_ANALOGWATCHDOG_SINGLE_INJEC)      || \
                                           ((WATCHDOG) == ADC_ANALOGWATCHDOG_SINGLE_REGINJEC)   || \
@@ -797,11 +1016,43 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
 #define IS_ADC_REGULAR_LENGTH(LENGTH) (((LENGTH) >= 1U) && ((LENGTH) <= 16U))
 #define IS_ADC_REGULAR_RANK(RANK) (((RANK) >= 1U) && ((RANK) <= (16U)))
 #define IS_ADC_REGULAR_DISC_NUMBER(NUMBER) (((NUMBER) >= 1U) && ((NUMBER) <= 8U))
+#if defined(APM32F403xx) || defined(APM32F402xx)
+#define IS_ADC_RANGE(ADC_VALUE) ((ADC_VALUE) <= 0x0FFFU)
+#else
 #define IS_ADC_RANGE(RESOLUTION, ADC_VALUE)                                     \
    ((((RESOLUTION) == ADC_RESOLUTION_12B) && ((ADC_VALUE) <= 0x0FFFU)) || \
     (((RESOLUTION) == ADC_RESOLUTION_10B) && ((ADC_VALUE) <= 0x03FFU)) || \
     (((RESOLUTION) == ADC_RESOLUTION_8B)  && ((ADC_VALUE) <= 0x00FFU)) || \
     (((RESOLUTION) == ADC_RESOLUTION_6B)  && ((ADC_VALUE) <= 0x003FU)))
+#endif /* APM32F403xx || APM32F402xx */
+
+#if defined(ADC_OSAMPCTRL_OSR)
+#define IS_ADC_OVERSAMPLING_RATIO(RATIO) (((RATIO) == ADC_OVERSAMPLING_RATIO_2)   || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_4)   || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_8)   || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_16)  || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_32)  || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_64)  || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_128) || \
+                               ((RATIO) == ADC_OVERSAMPLING_RATIO_256))
+#endif /* ADC_OSAMPCTRL_OSR */
+
+#if defined(ADC_OSAMPCTRL_OSS)
+#define IS_ADC_OVERSAMPLING_SHIFT(SHIFT) (((SHIFT) == ADC_OVERSAMPLING_SHIFT_0) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_1) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_2) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_3) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_4) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_5) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_6) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_7) || \
+                                          ((SHIFT) == ADC_OVERSAMPLING_SHIFT_8))
+#endif /* ADC_OSAMPCTRL_OSS */
+
+#if defined(ADC_OSAMPCTRL_TOS)
+#define IS_ADC_OVERSAMPLING_MODE(MODE) (((MODE) == ADC_OVERSAMPLING_MULTI_TRIGGER) || \
+                                         ((MODE) == ADC_OVERSAMPLING_SINGLE_TRIGGER))
+#endif /* ADC_OSAMPCTRL_TOS */
 
 /**
   * @brief  Set ADC Regular channel sequence length.
@@ -871,12 +1122,15 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
   */
 #define ADC_CTRL1_SCANENCONV(_SCANCONV_MODE_) ((_SCANCONV_MODE_) << 8U)
 
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 /**
   * @brief  Enable the ADC end of conversion selection.
   * @param  _EOCSelection_MODE_ End of conversion selection mode.
   * @retval None
   */
 #define ADC_CTRL2_EOCSELelection(_EOCSelection_MODE_) ((_EOCSelection_MODE_) << 10U)
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
 
 /**
   * @brief  Enable the ADC DMA continuous request.
@@ -885,12 +1139,14 @@ uint32_t DAL_ADC_GetError(ADC_HandleTypeDef *hadc);
   */
 #define ADC_CTRL2_DMAENContReq(_DMAContReq_MODE_) ((_DMAContReq_MODE_) << 9U)
 
+#if defined(ADC_CTRL1_RESSEL)
 /**
   * @brief Return resolution bits in CTRL1 register.
   * @param __HANDLE__ ADC handle
   * @retval None
   */
 #define ADC_GET_RESOLUTION(__HANDLE__) (((__HANDLE__)->Instance->CTRL1) & ADC_CTRL1_RESSEL)
+#endif /* ADC_CTRL1_RESSEL */
 
 /**
   * @}

@@ -32,11 +32,6 @@
  extern "C" {
 #endif
 
-/* Configuration settings for log component */
-#define USE_LOG_COMPONENT   0U
-/* Include log header file */
-#include "apm32f4xx_dal_log.h"
-
 /* Configuration settings for assert enable */
 /* #define USE_FULL_ASSERT     1U */
 
@@ -343,7 +338,7 @@
     #define ASSERT_PARAM(_PARAM_)                         ((void)0U)
 #endif /* USE_FULL_ASSERT */
 
-void DAL_ErrorHandler(void);
+void Error_Handler(void);
 
 #ifdef __cplusplus
 }

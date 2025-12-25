@@ -7,7 +7,7 @@
   *
   * @attention
   *
-  *  Copyright (C) 2023 Geehy Semiconductor
+  *  Copyright (C) 2023-2025 Geehy Semiconductor
   *
   *  You may not use this file except in compliance with the
   *  GEEHY COPYRIGHT NOTICE (GEEHY SOFTWARE PACKAGE LICENSE).
@@ -29,11 +29,6 @@
 #ifdef __cplusplus
  extern "C" {
 #endif
-
-/* Configuration settings for log component */
-#define USE_LOG_COMPONENT   0U
-/* Include log header file */
-#include "apm32f4xx_dal_log.h"
 
 /* Configuration settings for assert enable */
 /* #define USE_FULL_ASSERT     1U */
@@ -346,11 +341,11 @@
 
 /* Assert Component */
 #if (USE_FULL_ASSERT == 1U)
-    #define ASSERT_PARAM(_PARAM_)                         ((_PARAM_) ? (void)0U : AssertFailedHandler((uint8_t *)__FILE__, __LINE__))
+    #define ASSERT_PARAM(_PARAM_)                         ((_PARAM_) ? (void)(_PARAM_) : AssertFailedHandler((uint8_t *)__FILE__, __LINE__))
     /* Declaration */
     void AssertFailedHandler(uint8_t *file, uint32_t line);
 #else
-    #define ASSERT_PARAM(_PARAM_)                         ((void)0U)
+    #define ASSERT_PARAM(_PARAM_)                         ((void)(_PARAM_))
 #endif /* USE_FULL_ASSERT */
 
 

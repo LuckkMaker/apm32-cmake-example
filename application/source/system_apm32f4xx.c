@@ -174,7 +174,7 @@ void SystemCoreClockUpdate(void)
     uint32_t sysClock = 0, pllvco = 0, pllc, pllClock, pllb;
     
     /* Get SYSCLK source */
-    sysClock = RCM->CFG & RCM_CFG_SCLKSWSTS;
+    sysClock = RCM->CFG & RCM_CFG_SCLKSELSTS;
 
     switch (sysClock)
     {

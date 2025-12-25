@@ -30,13 +30,9 @@
   * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
   * OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
   * The original code has been modified by Geehy Semiconductor.
-  *
-  * Copyright (c) 2017 STMicroelectronics.
-  * Copyright (C) 2023 Geehy Semiconductor.
+  * Copyright (c) 2017 STMicroelectronics. Copyright (C) 2023-2025 Geehy Semiconductor.
   * All rights reserved.
-  *
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
@@ -123,6 +119,19 @@
     
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/ 
+  /* Delay for ADC calibration:                                               */
+  /* Hardware prerequisite before starting a calibration: the ADC must have   */
+  /* been in power-on state for at least two ADC clock cycles.                */
+  /* Unit: ADC clock cycles                                                   */
+  #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES       2U
+
+  /* Timeout value for ADC calibration                                        */
+  /* Value defined to be higher than worst cases: low clocks freq,            */
+  /* maximum prescaler.                                                       */
+  /* Ex of profile low frequency : Clock source at 0.1 MHz, ADC clock         */
+  /* prescaler 4, sampling time 12.5 ADC clock cycles, resolution 12 bits.    */
+  /* Unit: ms                                                                 */
+  #define ADC_CALIBRATION_TIMEOUT          10U
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /** @addtogroup ADCEx_Private_Functions
@@ -151,6 +160,7 @@ static void ADC_MultiModeDMAHalfConvCplt(DMA_HandleTypeDef *hdma);
                  ##### Extended features functions #####
  ===============================================================================  
     [..]  This section provides functions allowing to:
+      (+) Start calibration.
       (+) Start conversion of injected channel.
       (+) Stop conversion of injected channel.
       (+) Start multimode and enable DMA transfer.
@@ -164,6 +174,133 @@ static void ADC_MultiModeDMAHalfConvCplt(DMA_HandleTypeDef *hdma);
   * @{
   */
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+/**
+  * @brief  Perform an ADC automatic self-calibration
+  *         Calibration prerequisite: ADC must be disabled (execute this
+  *         function before DAL_ADC_Start() or after DAL_ADC_Stop() ).
+  *         During calibration process, ADC is enabled. ADC is let enabled at
+  *         the completion of this function.
+  * @param  hadc: ADC handle
+  * @retval HAL status
+  */
+DAL_StatusTypeDef DAL_ADCEx_Calibration_Start(ADC_HandleTypeDef* hadc)
+{
+  uint32_t tickstart;
+  __IO uint32_t counter = 0U;
+
+  /* Check the parameters */
+  ASSERT_PARAM(IS_ADC_ALL_INSTANCE(hadc->Instance));
+
+  /* Process locked */
+  __DAL_LOCK(hadc);
+
+  /* Disable the ADC peripheral */
+  __DAL_ADC_DISABLE(hadc);
+
+  /* Check if ADC peripheral is disabled in order to enable it and wait during 
+     Tstab time the ADC's stabilization */
+  if((hadc->Instance->CTRL2 & ADC_CTRL2_ADCEN) != ADC_CTRL2_ADCEN)
+  {  
+    /* Enable the Peripheral */
+    __DAL_ADC_ENABLE(hadc);
+    
+    /* Delay for ADC stabilization time */
+    /* Compute number of CPU cycles to wait for */
+    counter = (ADC_STAB_DELAY_US * (SystemCoreClock / 1000000U));
+    while(counter != 0U)
+    {
+      counter--;
+    }
+  }
+
+  /* Start ADC calibration if ADC is effectively enabled */
+  if(DAL_IS_BIT_SET(hadc->Instance->CTRL2, ADC_CTRL2_ADCEN))
+  {
+    /* Set ADC state */
+    ADC_STATE_CLR_SET(hadc->State,
+                      DAL_ADC_STATE_REG_BUSY | DAL_ADC_STATE_INJ_BUSY,
+                      DAL_ADC_STATE_BUSY_INTERNAL);
+
+    /* Hardware prerequisite: delay before starting the calibration.          */
+    /*  - Computation of CPU clock cycles corresponding to ADC clock cycles.  */
+    /*  - Wait for the expected ADC clock cycles delay */
+    counter = ((SystemCoreClock
+                        / DAL_RCMEx_GetPeriphCLKFreq(RCM_PERIPHCLK_ADC))
+                       * ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES        );
+
+    /* Wait for the expected ADC clock cycles delay */
+    while(counter != 0U)
+    {
+      counter--;
+    }
+
+    /* Reset ADC calibration register */
+    SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_CALRST);
+
+    tickstart = DAL_GetTick();
+
+    /* Wait for calibration reset completion */
+    while(DAL_IS_BIT_SET(hadc->Instance->CTRL2, ADC_CTRL2_CALRST))
+    {
+      if((DAL_GetTick() - tickstart) > ADC_CALIBRATION_TIMEOUT)
+      {
+        /* New check to avoid false timeout detection in case of preemption */
+        if(DAL_IS_BIT_SET(hadc->Instance->CTRL2, ADC_CTRL2_CALRST))
+        {
+          /* Update ADC state machine to error */
+          ADC_STATE_CLR_SET(hadc->State,
+                            DAL_ADC_STATE_BUSY_INTERNAL,
+                            DAL_ADC_STATE_ERROR_INTERNAL);
+
+          /* Process unlocked */
+          __DAL_UNLOCK(hadc);
+
+          return DAL_ERROR;
+        }
+      }
+    }
+
+    /* Start the calibration */
+    SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_CAL);
+
+    tickstart = DAL_GetTick();
+
+    /* Wait for calibration completion */
+    while(DAL_IS_BIT_SET(hadc->Instance->CTRL2, ADC_CTRL2_CAL))
+    {
+      if((DAL_GetTick() - tickstart) > ADC_CALIBRATION_TIMEOUT)
+      {
+        /* New check to avoid false timeout detection in case of preemption */
+        if(DAL_IS_BIT_SET(hadc->Instance->CTRL2, ADC_CTRL2_CAL))
+        {
+          /* Update ADC state machine to error */
+          ADC_STATE_CLR_SET(hadc->State,
+                            DAL_ADC_STATE_BUSY_INTERNAL,
+                            DAL_ADC_STATE_ERROR_INTERNAL);
+
+          /* Process unlocked */
+          __DAL_UNLOCK(hadc);
+
+          return DAL_ERROR;
+        }
+      }
+    }
+
+    /* Set ADC state */
+    ADC_STATE_CLR_SET(hadc->State,
+                      DAL_ADC_STATE_BUSY_INTERNAL,
+                      DAL_ADC_STATE_READY);
+  }
+
+  /* Process unlocked */
+  __DAL_UNLOCK(hadc);
+
+  /* Return function status */
+  return DAL_OK;
+}
+#endif /* APM32F403xx || APM32F402xx */
+
 /**
   * @brief  Enables the selected ADC software start conversion of the injected channels.
   * @param  hadc pointer to a ADC_HandleTypeDef structure that contains
@@ -173,8 +310,11 @@ static void ADC_MultiModeDMAHalfConvCplt(DMA_HandleTypeDef *hdma);
 DAL_StatusTypeDef DAL_ADCEx_InjectedStart(ADC_HandleTypeDef* hadc)
 {
   __IO uint32_t counter = 0U;
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   uint32_t tmp1 = 0U, tmp2 = 0U;
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   
   /* Process locked */
   __DAL_LOCK(hadc);
@@ -226,6 +366,31 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedStart(ADC_HandleTypeDef* hadc)
     /* (To ensure of no unknown state from potential previous ADC operations) */
     __DAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_JEOC);
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    /* Enable conversion of injected group.                                   */
+    /* If software start has been selected, conversion starts immediately.    */
+    /* If external trigger has been selected, conversion will start at next   */
+    /* trigger event.                                                         */
+    /* If automatic injected conversion is enabled, conversion will start     */
+    /* after next regular group conversion.                                   */
+    /* Case of multimode enabled (for devices with several ADCs): if ADC is   */
+    /* slave, ADC is enabled only (conversion is not started). If ADC is      */
+    /* master, ADC is enabled and conversion is started.                      */
+    if(DAL_IS_BIT_CLR(hadc->Instance->CTRL1, ADC_CTRL1_INJGACEN))
+    {
+      if (ADC_IS_SOFTWARE_START_INJECTED(hadc)     &&
+          ADC_NONMULTIMODE_OR_MULTIMODEMASTER(hadc)  )
+      {
+        /* Start ADC conversion on injected group with SW start */
+        SET_BIT(hadc->Instance->CTRL2, (ADC_CTRL2_INJSWSC | ADC_CTRL2_INJEXTTRGEN));
+      }
+      else
+      {
+        /* Start ADC conversion on injected group with external trigger */
+        SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_INJEXTTRGEN);
+      }
+    }
+#else
     /* Pointer to the common control register to which is belonging hadc    */
     /* (Depending on APM32F4 product, there may be up to 3 ADC and 1 common */
     /* control register)                                                    */
@@ -252,6 +417,7 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedStart(ADC_HandleTypeDef* hadc)
         hadc->Instance->CTRL2 |= ADC_CTRL2_INJSWSC;
       }
     }
+#endif /* APM32F403xx || APM32F402xx */
   }
   else
   {
@@ -276,8 +442,11 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedStart(ADC_HandleTypeDef* hadc)
 DAL_StatusTypeDef DAL_ADCEx_InjectedStart_IT(ADC_HandleTypeDef* hadc)
 {
   __IO uint32_t counter = 0U;
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   uint32_t tmp1 = 0U, tmp2 = 0U;
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   
   /* Process locked */
   __DAL_LOCK(hadc);
@@ -332,6 +501,28 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedStart_IT(ADC_HandleTypeDef* hadc)
     /* Enable end of conversion interrupt for injected channels */
     __DAL_ADC_ENABLE_IT(hadc, ADC_IT_JEOC);
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    /* Start conversion of injected group if software start has been selected */
+    /* and if automatic injected conversion is disabled.                      */
+    /* If external trigger has been selected, conversion will start at next   */
+    /* trigger event.                                                         */
+    /* If automatic injected conversion is enabled, conversion will start     */
+    /* after next regular group conversion.                                   */
+    if (DAL_IS_BIT_CLR(hadc->Instance->CTRL1, ADC_CTRL1_INJGACEN))
+    {
+      if (ADC_IS_SOFTWARE_START_INJECTED(hadc)     &&
+          ADC_NONMULTIMODE_OR_MULTIMODEMASTER(hadc)  )
+      {
+        /* Start ADC conversion on injected group with SW start */
+        SET_BIT(hadc->Instance->CTRL2, (ADC_CTRL2_INJSWSC | ADC_CTRL2_INJEXTTRGEN));
+      }
+      else
+      {
+        /* Start ADC conversion on injected group with external trigger */
+        SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_INJEXTTRGEN);
+      }
+    }
+#else
     /* Pointer to the common control register to which is belonging hadc    */
     /* (Depending on APM32F4 product, there may be up to 3 ADC and 1 common */
     /* control register)                                                    */
@@ -358,6 +549,7 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedStart_IT(ADC_HandleTypeDef* hadc)
         hadc->Instance->CTRL2 |= ADC_CTRL2_INJSWSC;
       }
     }
+#endif /* APM32F403xx || APM32F402xx */
   }
   else
   {
@@ -477,12 +669,19 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedPollForConversion(ADC_HandleTypeDef* hadc, u
   /*       The test of scan sequence on going is done either with scan        */
   /*       sequence disabled or with end of conversion flag set to            */
   /*       of end of sequence.                                                */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  if(ADC_IS_SOFTWARE_START_INJECTED(hadc)                     || 
+     (DAL_IS_BIT_CLR(hadc->Instance->CTRL1, ADC_CTRL1_INJGACEN) &&
+     (ADC_IS_SOFTWARE_START_REGULAR(hadc)        &&
+      (hadc->Init.ContinuousConvMode == DISABLE)   )        )   )
+#else
   if(ADC_IS_SOFTWARE_START_INJECTED(hadc)                    &&
      (DAL_IS_BIT_CLR(hadc->Instance->INJSEQ, ADC_INJSEQ_INJSEQLEN)  ||
       DAL_IS_BIT_CLR(hadc->Instance->CTRL2, ADC_CTRL2_EOCSEL)    ) &&
      (DAL_IS_BIT_CLR(hadc->Instance->CTRL1, ADC_CTRL1_INJGACEN) &&
       (ADC_IS_SOFTWARE_START_REGULAR(hadc)       &&
       (hadc->Init.ContinuousConvMode == DISABLE)   )       )   )
+#endif /* APM32F403xx || APM32F402xx */
   {
     /* Set ADC state */
     CLEAR_BIT(hadc->State, DAL_ADC_STATE_INJ_BUSY);
@@ -626,12 +825,18 @@ uint32_t DAL_ADCEx_InjectedGetValue(ADC_HandleTypeDef* hadc, uint32_t InjectedRa
 DAL_StatusTypeDef DAL_ADCEx_MultiModeStart_DMA(ADC_HandleTypeDef* hadc, uint32_t* pData, uint32_t Length)
 {
   __IO uint32_t counter = 0U;
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   
   /* Check the parameters */
   ASSERT_PARAM(IS_FUNCTIONAL_STATE(hadc->Init.ContinuousConvMode));
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   ASSERT_PARAM(IS_ADC_EXT_TRIG_EDGE(hadc->Init.ExternalTrigConvEdge));
   ASSERT_PARAM(IS_FUNCTIONAL_STATE(hadc->Init.DMAContinuousRequests));
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
   
   /* Process locked */
   __DAL_LOCK(hadc);
@@ -639,7 +844,7 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeStart_DMA(ADC_HandleTypeDef* hadc, uint32_t
   /* Check if ADC peripheral is disabled in order to enable it and wait during 
      Tstab time the ADC's stabilization */
   if((hadc->Instance->CTRL2 & ADC_CTRL2_ADCEN) != ADC_CTRL2_ADCEN)
-  {  
+  {
     /* Enable the Peripheral */
     __DAL_ADC_ENABLE(hadc);
     
@@ -702,6 +907,29 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeStart_DMA(ADC_HandleTypeDef* hadc, uint32_t
     /* (To ensure of no unknown state from potential previous ADC operations) */
     __DAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_EOC);
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    /* Enable ADC DMA mode */
+    hadc->Instance->CTRL2 |= ADC_CTRL2_DMAEN;
+
+    /* Start the DMA channel */
+    DAL_DMA_Start_IT(hadc->DMA_Handle, (uint32_t)&hadc->Instance->REGDATA, (uint32_t)pData, Length);
+
+    /* Start conversion of regular group if software start has been selected. */
+    /* If external trigger has been selected, conversion will start at next   */
+    /* trigger event.                                                         */
+    /* Note: Alternate trigger for single conversion could be to force an     */
+    /*       additional set of bit ADON "hadc->Instance->CR2 |= ADC_CR2_ADON;"*/
+    if (ADC_IS_SOFTWARE_START_REGULAR(hadc))
+    {
+      /* Start ADC conversion on regular group with SW start */
+      SET_BIT(hadc->Instance->CTRL2, (ADC_CTRL2_REGSWSC | ADC_CTRL2_REGEXTTRGEN));
+    }
+    else
+    {
+      /* Start ADC conversion on regular group with external trigger */
+      SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_REGEXTTRGEN);
+    }
+#else
     /* Enable ADC overrun interrupt */
     __DAL_ADC_ENABLE_IT(hadc, ADC_IT_OVR);
 
@@ -728,8 +956,9 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeStart_DMA(ADC_HandleTypeDef* hadc, uint32_t
     if((hadc->Instance->CTRL2 & ADC_CTRL2_REGEXTTRGEN) == RESET) 
     {
       /* Enable the selected ADC software conversion for regular group */
-      hadc->Instance->CTRL2 |= (uint32_t)ADC_CTRL2_REGCHSC;
+      hadc->Instance->CTRL2 |= (uint32_t)ADC_CTRL2_REGSWSC;
     }
+#endif /* APM32F403xx || APM32F402xx */
   }
   else
   {
@@ -773,15 +1002,26 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeStop_DMA(ADC_HandleTypeDef* hadc)
   /* Check if ADC is effectively disabled */
   if(DAL_IS_BIT_CLR(hadc->Instance->CTRL2, ADC_CTRL2_ADCEN))
   {
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    /* Disable ADC DMA mode */
+    CLEAR_BIT(tmpADC_Common->CTRL2, ADC_CTRL2_DMAEN);
+    
+    /* Reset configuration of ADC DMA continuous request for dual mode */
+    CLEAR_BIT(tmpADC_Common->CTRL1, ADC_CTRL1_DUALMCFG);
+#else
     /* Disable the selected ADC DMA mode for multimode */
     tmpADC_Common->CCTRL &= ~ADC_CCTRL_DMAMODEDISSEL;
+#endif /* APM32F403xx || APM32F402xx */
     
     /* Disable the DMA channel (in case of DMA in circular mode or stop while */
     /* DMA transfer is on going)                                              */
     tmp_dal_status = DAL_DMA_Abort(hadc->DMA_Handle);
-    
+
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
     /* Disable ADC overrun interrupt */
     __DAL_ADC_DISABLE_IT(hadc, ADC_IT_OVR);
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
     
     /* Set ADC state */
     ADC_STATE_CLR_SET(hadc->State,
@@ -805,8 +1045,30 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeStop_DMA(ADC_HandleTypeDef* hadc)
   */
 uint32_t DAL_ADCEx_MultiModeGetValue(ADC_HandleTypeDef* hadc)
 {
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  uint32_t tmpDR = 0U;
+#else
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F403xx || APM32F402xx */
 
+  UNUSED(hadc);
+
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  /* Note: EOC flag is not cleared here by software because automatically     */
+  /*       cleared by hardware when reading register DR.                      */
+  
+  /* On STM32F1 devices, ADC1 data register DR contains ADC2 conversions      */
+  /* only if ADC1 DMA mode is enabled.                                        */
+  tmpDR = hadc->Instance->REGDATA;
+
+  if (DAL_IS_BIT_CLR(ADC1->CTRL2, ADC_CTRL2_DMAEN))
+  {
+    tmpDR |= (ADC2->REGDATA << 16U);
+  }
+    
+  /* Return ADC converted value */ 
+  return tmpDR;
+#else
   /* Pointer to the common control register to which is belonging hadc    */
   /* (Depending on APM32F4 product, there may be up to 3 ADC and 1 common */
   /* control register)                                                    */
@@ -814,6 +1076,7 @@ uint32_t DAL_ADCEx_MultiModeGetValue(ADC_HandleTypeDef* hadc)
 
   /* Return the multi mode conversion value */
   return tmpADC_Common->CDATA;
+#endif /* APM32F403xx || APM32F402xx */
 }
 #endif /* ADC_MULTIMODE_SUPPORT */
 
@@ -848,7 +1111,11 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
   
 #endif /* USE_FULL_ASSERT  */
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  __IO uint32_t counter = 0U;
+#else
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F403xx || APM32F402xx */
 
   /* Check the parameters */
   ASSERT_PARAM(IS_ADC_CHANNEL(sConfigInjected->InjectedChannel));
@@ -864,10 +1131,13 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
   ASSERT_PARAM(IS_ADC_RANGE(tmp, sConfigInjected->InjectedOffset));
 #endif /* USE_FULL_ASSERT  */
 
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F411xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
   if(sConfigInjected->ExternalTrigInjecConv != ADC_INJECTED_SOFTWARE_START)
   {
     ASSERT_PARAM(IS_ADC_EXT_INJEC_TRIG_EDGE(sConfigInjected->ExternalTrigInjecConvEdge));
   }
+#endif /* APM32F405xx || APM32F407xx || APM32F411xx || APM32F415xx || APM32F417xx || APM32F465xx || APM32F425xx || APM32F427xx */
 
   /* Process locked */
   __DAL_LOCK(hadc);
@@ -889,6 +1159,16 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
     /* Set the new sample time */
     hadc->Instance->SMPTIM2 |= ADC_SMPTIM2(sConfigInjected->InjectedSamplingTime, sConfigInjected->InjectedChannel);
   }
+
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  /* If ADC1 InjectedChannel_16 or InjectedChannel_17 is selected, enable Temperature sensor  */
+  /* and VREFINT measurement path.                                            */
+  if ((sConfigInjected->InjectedChannel == ADC_CHANNEL_TEMPSENSOR) ||
+      (sConfigInjected->InjectedChannel == ADC_CHANNEL_VREFINT)      )
+  {
+    SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_TSVREFEN);
+  }
+#endif /* APM32F403xx || APM32F402xx */
   
   /*---------------------------- ADCx JSQR Configuration -----------------*/
   hadc->Instance->INJSEQ &= ~(ADC_INJSEQ_INJSEQLEN);
@@ -913,15 +1193,20 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
     hadc->Instance->CTRL2 &= ~(ADC_CTRL2_INJGEXTTRGSEL);
     hadc->Instance->CTRL2 |=  sConfigInjected->ExternalTrigInjecConv;
     
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    /* Select external trigger polarity */
+    hadc->Instance->CTRL2 |= ADC_CTRL2_INJEXTTRGEN;
+#else
     /* Select external trigger polarity */
     hadc->Instance->CTRL2 &= ~(ADC_CTRL2_INJEXTTRGEN);
     hadc->Instance->CTRL2 |= sConfigInjected->ExternalTrigInjecConvEdge;
+#endif /* APM32F403xx || APM32F402xx */
   }
   else
   {
     /* Reset the external trigger */
     hadc->Instance->CTRL2 &= ~(ADC_CTRL2_INJGEXTTRGSEL);
-    hadc->Instance->CTRL2 &= ~(ADC_CTRL2_INJEXTTRGEN);  
+    hadc->Instance->CTRL2 &= ~(ADC_CTRL2_INJEXTTRGEN);
   }
   
   if (sConfigInjected->AutoInjectedConv != DISABLE)
@@ -970,6 +1255,39 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
       break;
   }
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  /* If ADC1 Channel_16 or Channel_17 is selected, enable Temperature sensor  */
+  /* and VREFINT measurement path.                                            */
+  if ((sConfigInjected->InjectedChannel == ADC_CHANNEL_TEMPSENSOR) || (sConfigInjected->InjectedChannel == ADC_CHANNEL_VREFINT))
+  {
+    /* For APM32F402/403xx devices with several ADC: Only ADC1 can access internal    */
+    /* measurement channels (VrefInt/TempSensor). If these channels are       */
+    /* intended to be set on other ADC instances, an error is reported.       */
+    if (hadc->Instance == ADC1)
+    {
+      if (READ_BIT(hadc->Instance->CTRL2, ADC_CTRL2_TSVREFEN) == RESET)
+      {
+        SET_BIT(hadc->Instance->CTRL2, ADC_CTRL2_TSVREFEN);
+        
+        if (sConfigInjected->InjectedChannel == ADC_CHANNEL_TEMPSENSOR)
+        {
+          /* Delay for temperature sensor stabilization time */
+          /* Compute number of CPU cycles to wait for */
+          counter = (ADC_TEMPSENSOR_DELAY_US * (SystemCoreClock / 1000000U));
+          while(counter != 0U)
+          {
+            counter--;
+          }
+        }
+      }
+    }
+    else
+    {
+      /* Update ADC state machine to error */
+      SET_BIT(hadc->State, DAL_ADC_STATE_ERROR_CONFIG);
+    }
+  }
+#else
   /* Pointer to the common control register to which is belonging hadc    */
   /* (Depending on APM32F4 product, there may be up to 3 ADC and 1 common */
   /* control register)                                                    */
@@ -988,6 +1306,7 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
     /* Enable the TSVREFEN channel*/
     tmpADC_Common->CCTRL |= ADC_CCTRL_TSVREFEN;
   }
+#endif /* APM32F403xx || APM32F402xx */
   
   /* Process unlocked */
   __DAL_UNLOCK(hadc);
@@ -1008,16 +1327,61 @@ DAL_StatusTypeDef DAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
 DAL_StatusTypeDef DAL_ADCEx_MultiModeConfigChannel(ADC_HandleTypeDef* hadc, ADC_MultiModeTypeDef* multimode)
 {
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  ADC_HandleTypeDef tmphadcSlave={0};
+#else
   ADC_Common_TypeDef *tmpADC_Common;
+#endif /* APM32F403xx || APM32F402xx */
 
   /* Check the parameters */
   ASSERT_PARAM(IS_ADC_MODE(multimode->Mode));
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  ASSERT_PARAM(IS_ADC_MULTIMODE_MASTER_INSTANCE(hadc->Instance));
+#else
   ASSERT_PARAM(IS_ADC_DMA_ACCESS_MODE(multimode->DMAAccessMode));
   ASSERT_PARAM(IS_ADC_SAMPLING_DELAY(multimode->TwoSamplingDelay));
+#endif /* APM32F403xx || APM32F402xx */
   
   /* Process locked */
   __DAL_LOCK(hadc);
 
+#if defined(APM32F403xx) || defined(APM32F402xx)
+  /* Set a temporary handle of the ADC slave associated to the ADC master     */
+  ADC_MULTI_SLAVE(hadc, &tmphadcSlave);
+
+  /* Parameters update conditioned to ADC state:                              */
+  /* Parameters that can be updated when ADC is disabled or enabled without   */
+  /* conversion on going on regular group:                                    */
+  /*  - ADC master and ADC slave DMA configuration                            */
+  /* Parameters that can be updated only when ADC is disabled:                */
+  /*  - Multimode mode selection                                              */
+  /* To optimize code, all multimode settings can be set when both ADCs of    */
+  /* the common group are in state: disabled.                                 */
+  if ((ADC_IS_ENABLE(hadc) == RESET)                     &&
+      (ADC_IS_ENABLE(&tmphadcSlave) == RESET)            &&
+      (IS_ADC_MULTIMODE_MASTER_INSTANCE(hadc->Instance))   )
+  {
+    MODIFY_REG(hadc->Instance->CTRL1,
+               ADC_CTRL1_DUALMCFG   ,
+               multimode->Mode     );
+  }
+  /* If one of the ADC sharing the same common group is enabled, no update    */
+  /* could be done on neither of the multimode structure parameters.          */
+  else
+  {
+    /* Update ADC state machine to error */
+    SET_BIT(hadc->State, DAL_ADC_STATE_ERROR_CONFIG);
+
+    /* Process unlocked */
+    __DAL_UNLOCK(hadc);
+
+    return DAL_ERROR;
+  }
+
+  /* Process unlocked */
+  __DAL_UNLOCK(hadc);
+
+#else
   /* Pointer to the common control register to which is belonging hadc    */
   /* (Depending on APM32F4 product, there may be up to 3 ADC and 1 common */
   /* control register)                                                    */
@@ -1037,6 +1401,7 @@ DAL_StatusTypeDef DAL_ADCEx_MultiModeConfigChannel(ADC_HandleTypeDef* hadc, ADC_
   
   /* Process unlocked */
   __DAL_UNLOCK(hadc);
+#endif /* APM32F403xx || APM32F402xx */
   
   /* Return function status */
   return DAL_OK;
@@ -1071,10 +1436,15 @@ static void ADC_MultiModeDMAConvCplt(DMA_HandleTypeDef *hdma)
     /*       The test of scan sequence on going is done either with scan    */
     /*       sequence disabled or with end of conversion flag set to        */
     /*       of end of sequence.                                            */
+#if defined(APM32F403xx) || defined(APM32F402xx)
+    if(ADC_IS_SOFTWARE_START_REGULAR(hadc)                   &&
+       (hadc->Init.ContinuousConvMode == DISABLE))
+#else
     if(ADC_IS_SOFTWARE_START_REGULAR(hadc)                   &&
        (hadc->Init.ContinuousConvMode == DISABLE)            &&
        (DAL_IS_BIT_CLR(hadc->Instance->REGSEQ1, ADC_REGSEQ1_REGSEQLEN) || 
         DAL_IS_BIT_CLR(hadc->Instance->CTRL2, ADC_CTRL2_EOCSEL)  )   )
+#endif /* APM32F403xx || APM32F402xx */
     {
       /* Disable ADC end of single conversion interrupt on group regular */
       /* Note: Overrun interrupt was enabled with EOC interrupt in          */

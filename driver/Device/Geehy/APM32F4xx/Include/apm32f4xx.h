@@ -4,9 +4,9 @@
  *
  * @brief       CMSIS APM32F4xx Device Peripheral Access Layer Header File.
  *
- * @version     V1.1.2
+ * @version     V1.1.5
  *
- * @date        2023-12-01
+ * @date        2025-03-10
  *
  * @attention
  *
@@ -25,7 +25,7 @@
  * The original code has been modified by Geehy Semiconductor.
  *
  * Copyright (c) 2017 STMicroelectronics.
- * Copyright (C) 2023 Geehy Semiconductor.
+ * Copyright (C) 2023-2024 Geehy Semiconductor.
  * All rights reserved.
  *
  * This software is licensed under terms that can be found in the LICENSE file
@@ -63,13 +63,20 @@
 /* Uncomment the line below according to the target APM32 device used in your
    application 
   */
-#if !defined (APM32F405xx) && !defined (APM32F407xx) && !defined (APM32F417xx) && \
-    !defined (APM32F411xx) && !defined (APM32F465xx)
+#if !defined (APM32F405xx) && !defined (APM32F407xx) && !defined (APM32F415xx) && \
+    !defined (APM32F417xx) && !defined (APM32F411xx) && !defined (APM32F465xx) && \
+    !defined (APM32F403xx) && !defined (APM32F402xx) && !defined (APM32F425xx) && \
+    !defined (APM32F427xx)
     /* #define APM32F405xx */   /*!< APM32F405RG, APM32F405VG and APM32F405ZG Devices */
     /* #define APM32F407xx */   /*!< APM32F407VG, APM32F407VE, APM32F407ZG, APM32F407ZE, APM32F407IG and APM32F407IE Devices */
+    /* #define APM32F415xx */   /*!< APM32F415VG, APM32F415VE, APM32F415ZG, APM32F415ZE, APM32F415IG and APM32F415IE Devices */
     /* #define APM32F417xx */   /*!< APM32F417VG, APM32F417VE, APM32F417ZG, APM32F417ZE, APM32F417IG and APM32F417IE Devices */
     /* #define APM32F411xx */   /*!< APM32F411CC, APM32F411CE, APM32F411RC, APM32F411RE, APM32F411VC and APM32F411VE Devices */
     /* #define APM32F465xx */   /*!< APM32F465CE, APM32F465RE and APM32F465VE Devices */
+    /* #define APM32F403xx */   /*!< APM32F403TB, APM32F403CB and APM32F403RB Devices */
+    /* #define APM32F402xx */   /*!< APM32F402TB, APM32F402CB and APM32F402RB Devices */
+    /* #define APM32F425xx */   /*!< APM32F425ZG, APM32F425VG, APM32F425RG and APM32F425CG Devices */
+    /* #define APM32F427xx */   /*!< APM32F427ZG, APM32F427VG, APM32F427RG and APM32F427CG Devices */
 #endif
 
 /*  Tip: To avoid modifying this file each time you need to switch between these
@@ -85,11 +92,11 @@
 #endif /* USE_DAL_DRIVER */
 
 /**
-  * @brief CMSIS version number V1.1.2
+  * @brief CMSIS version number V1.1.5
   */
 #define __APM32F4xx_CMSIS_VERSION_MAIN   (0x01U) /*!< [31:24] main version */
 #define __APM32F4xx_CMSIS_VERSION_SUB1   (0x01U) /*!< [23:16] sub1 version */
-#define __APM32F4xx_CMSIS_VERSION_SUB2   (0x02U) /*!< [15:8]  sub2 version */
+#define __APM32F4xx_CMSIS_VERSION_SUB2   (0x05U) /*!< [15:8]  sub2 version */
 #define __APM32F4xx_CMSIS_VERSION_RC     (0x00U) /*!< [7:0]  release candidate */
 #define __APM32F4xx_CMSIS_VERSION        ((__APM32F4xx_CMSIS_VERSION_MAIN << 24)\
                                          |(__APM32F4xx_CMSIS_VERSION_SUB1 << 16)\
@@ -108,12 +115,22 @@
   #include "apm32f405xx.h"
 #elif defined(APM32F407xx)
   #include "apm32f407xx.h"
+#elif defined(APM32F415xx)
+  #include "apm32f415xx.h"
 #elif defined(APM32F417xx)
   #include "apm32f417xx.h"
 #elif defined(APM32F411xx)
   #include "apm32f411xx.h"
 #elif defined(APM32F465xx)
   #include "apm32f465xx.h"
+#elif defined(APM32F403xx)
+  #include "apm32f403xx.h"
+#elif defined(APM32F402xx)
+  #include "apm32f402xx.h"
+#elif defined(APM32F425xx)
+  #include "apm32f425xx.h"
+#elif defined(APM32F427xx)
+  #include "apm32f427xx.h"
 #else
  #error "Please select first the target APM32F4xx device used in your application (in apm32f4xx.h file)"
 #endif
@@ -152,6 +169,8 @@ typedef enum
 /** @addtogroup Exported_macro
   * @{
   */
+#define UNUSED(X)             (void)X      /* To avoid gcc/g++ warnings */
+
 #define SET_BIT(REG, BIT)     ((REG) |= (BIT))
 
 #define CLEAR_BIT(REG, BIT)   ((REG) &= ~(BIT))

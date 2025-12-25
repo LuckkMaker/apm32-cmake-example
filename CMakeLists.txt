@@ -16,15 +16,15 @@ endif()
 
 # project settings
 # Set the project name
-set(CMAKE_PROJECT_NAME              test-firmware)
+set(CMAKE_PROJECT_NAME              firmware)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
 
+project(${CMAKE_PROJECT_NAME})
+
 # Enable CMake support for ASM and C languages
 enable_language(C ASM)
-
-project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/apm32f405xg_flash.ld)
 

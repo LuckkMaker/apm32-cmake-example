@@ -94,7 +94,7 @@ void DAL_SysClkConfig(void)
     RCM_OscInitStruct.PLL.PLLD          = 7U;
     if(DAL_RCM_OscConfig(&RCM_OscInitStruct) != DAL_OK)
     {
-        DAL_ErrorHandler();
+        Error_Handler();
     }
 
     /* Configure clock */
@@ -105,7 +105,7 @@ void DAL_SysClkConfig(void)
     RCM_ClkInitStruct.APB2CLKDivider    = RCM_HCLK_DIV2;  
     if(DAL_RCM_ClockConfig(&RCM_ClkInitStruct, FLASH_LATENCY_5) != DAL_OK)
     {
-        DAL_ErrorHandler();
+        Error_Handler();
     }
 }
 
@@ -116,12 +116,13 @@ void DAL_SysClkConfig(void)
  *
  * @retval    None
  */
-void DAL_ErrorHandler(void)
+void Error_Handler(void)
 {
     /* When the function is needed, this function 
        could be implemented in the user file
     */
-    while(1)
+   __disable_irq();
+    while (1)
     {
     }
 }

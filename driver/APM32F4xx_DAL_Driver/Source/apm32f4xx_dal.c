@@ -29,13 +29,9 @@
   * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
   * OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
   * The original code has been modified by Geehy Semiconductor.
-  *
-  * Copyright (c) 2017 STMicroelectronics.
-  * Copyright (C) 2023 Geehy Semiconductor.
+  * Copyright (c) 2017 STMicroelectronics. Copyright (C) 2023-2025 Geehy Semiconductor.
   * All rights reserved.
-  *
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
@@ -75,11 +71,11 @@
   * @{
   */
 /**
-  * @brief APM32F4xx DAL Driver version number V1.1.2
+  * @brief APM32F4xx DAL Driver version number V1.1.4
   */
 #define __APM32F4xx_DAL_VERSION_MAIN   (0x01U) /*!< [31:24] main version */
 #define __APM32F4xx_DAL_VERSION_SUB1   (0x01U) /*!< [23:16] sub1 version */
-#define __APM32F4xx_DAL_VERSION_SUB2   (0x02U) /*!< [15:8]  sub2 version */
+#define __APM32F4xx_DAL_VERSION_SUB2   (0x04U) /*!< [15:8]  sub2 version */
 #define __APM32F4xx_DAL_VERSION_RC     (0x00U) /*!< [7:0]  release candidate */ 
 #define __APM32F4xx_DAL_VERSION         ((__APM32F4xx_DAL_VERSION_MAIN << 24U)\
                                         |(__APM32F4xx_DAL_VERSION_SUB1 << 16U)\
@@ -88,25 +84,17 @@
                                         
 #define IDCODE_DEVID_MASK    0x00000FFFU
 
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F411xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 /* ------------ RCM registers bit address in the alias region ----------- */
 #define SYSCFG_OFFSET             (SYSCFG_BASE - PERIPH_BASE)
-/* ---  MEMRMP Register ---*/ 
-/* Alias word address of UFB_MODE bit */ 
-#define MEMRMP_OFFSET             SYSCFG_OFFSET 
-#define UFB_MODE_BIT_NUMBER       SYSCFG_MMSEL_UFB_MODE_Pos
-#define UFB_MODE_BB               (uint32_t)(PERIPH_BB_BASE + (MEMRMP_OFFSET * 32U) + (UFB_MODE_BIT_NUMBER * 4U)) 
-
-/* ---  CMPCR Register ---*/ 
-/* Alias word address of CMP_PD bit */ 
+/* ---  CCCTRL Register ---*/ 
+/* Alias word address of CCPD bit */ 
 #define CMPCR_OFFSET              (SYSCFG_OFFSET + 0x20U) 
 #define CMP_PD_BIT_NUMBER         SYSCFG_CCCTRL_CCPD_Pos
 #define CMPCR_CMP_PD_BB           (uint32_t)(PERIPH_BB_BASE + (CMPCR_OFFSET * 32U) + (CMP_PD_BIT_NUMBER * 4U))
 
-/* ---  MCHDLYCR Register ---*/ 
-/* Alias word address of BSCKSEL bit */ 
-#define MCHDLYCR_OFFSET            (SYSCFG_OFFSET + 0x30U) 
-#define BSCKSEL_BIT_NUMBER         SYSCFG_MCHDLYCR_BSCKSEL_Pos
-#define MCHDLYCR_BSCKSEL_BB        (uint32_t)(PERIPH_BB_BASE + (MCHDLYCR_OFFSET * 32U) + (BSCKSEL_BIT_NUMBER * 4U))
+#endif /* APM32F405xx || APM32F407xx || APM32F415xx || APM32F417xx || APM32F411xx || APM32F465xx || APM32F425xx || APM32F427xx */
 /**
   * @}
   */
@@ -224,11 +212,15 @@ DAL_StatusTypeDef DAL_DeInit(void)
   __DAL_RCM_AHB1_FORCE_RESET();
   __DAL_RCM_AHB1_RELEASE_RESET();
 
+#if defined(RCM_AHB2_SUPPORT)
   __DAL_RCM_AHB2_FORCE_RESET();
   __DAL_RCM_AHB2_RELEASE_RESET();
+#endif /* RCM_AHB2_SUPPORT */
 
+#if defined(RCM_AHB3_SUPPORT)
   __DAL_RCM_AHB3_FORCE_RESET();
   __DAL_RCM_AHB3_RELEASE_RESET();
+#endif /* RCM_AHB3_SUPPORT */
 
   /* De-Init the low level hardware */
   DAL_MspDeInit();
@@ -393,7 +385,8 @@ DAL_StatusTypeDef DAL_SetTickFreq(DAL_TickFreqTypeDef Freq)
 
 /**
   * @brief Return tick frequency.
-  * @retval tick period in Hz
+  * @retval Tick frequency.
+  *         Value of @ref DAL_TickFreqTypeDef.
   */
 DAL_TickFreqTypeDef DAL_GetTickFreq(void)
 {
@@ -463,7 +456,7 @@ __weak void DAL_ResumeTick(void)
   * @brief  Returns the DAL revision
   * @retval version : 0xXYZR (8bits for each decimal, R for RC)
   */
-uint32_t DAL_GetHalVersion(void)
+uint32_t DAL_GetDalVersion(void)
 {
   return __APM32F4xx_DAL_VERSION;
 }
@@ -540,6 +533,8 @@ void DAL_DBGMCU_DisableDBGStandbyMode(void)
   CLEAR_BIT(DBGMCU->CFG, DBGMCU_CFG_STANDBY_CLK_STS);
 }
 
+#if defined(APM32F405xx) || defined(APM32F407xx) || defined(APM32F415xx) || defined(APM32F417xx) || defined(APM32F411xx) || defined(APM32F465xx) || \
+    defined(APM32F425xx) || defined(APM32F427xx)
 /**
   * @brief  Enables the I/O Compensation Cell.
   * @note   The I/O compensation cell can be used only when the device supply
@@ -561,6 +556,7 @@ void DAL_DisableCompensationCell(void)
 {
   *(__IO uint32_t *)CMPCR_CMP_PD_BB = (uint32_t)DISABLE;
 }
+#endif /* APM32F405xx || APM32F407xx || APM32F415xx || APM32F417xx || APM32F411xx || APM32F465xx || APM32F425xx || APM32F427xx */
 
 /**
   * @brief  Returns first word of the unique device identifier (UID based on 96 bits)
